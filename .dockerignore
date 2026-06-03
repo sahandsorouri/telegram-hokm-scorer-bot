@@ -1,0 +1,7 @@
+.venv
+venv
+.git
+data
+*.log
+__pycache__
+seen_posts.json
