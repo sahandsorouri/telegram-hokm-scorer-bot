@@ -103,6 +103,8 @@ def end_game_text(record: dict, today: dict, state: dict | None = None) -> str:
     # The normal/hakem split below already accounts for every kot, so we don't
     # repeat an undifferentiated total line here.
     split_line = _split_kot_line(today.get("split_kots"))
+    wrap_line = _wrap_line(today.get("wraps"))
+    this_game_wrap_line = _this_game_wrap_line(record)
 
     extras = ""
     if state is not None:
@@ -117,11 +119,12 @@ def end_game_text(record: dict, today: dict, state: dict | None = None) -> str:
         f"{TEAM_LABEL[winner]} برنده 🎉\n"
         "\n🎯 <b>نتیجه:</b>\n"
         f"🔴 {fa(fs['red'])} — {fa(fs['blue'])} 🔵"
+        f"{this_game_wrap_line}"
         f"{duration_line}\n"
         f"\n📅 <b>امروز ({today['today_date']}):</b>\n"
         f"{today_line}\n"
         "\n🏆 <b>مجموع کل:</b>\n"
-        f"{total_line}{split_line}"
+        f"{total_line}{split_line}{wrap_line}"
         f"{extras}"
     )
 
@@ -202,8 +205,33 @@ def _split_kot_line(split: dict | None) -> str:
     )
 
 
+def _wrap_line(wraps: dict | None) -> str:
+    """Lifetime rotating-kot line. Hidden entirely when it has never happened."""
+    if not wraps:
+        return ""
+    if not (wraps.get("red") or wraps.get("blue")):
+        return ""
+    return f"\n\U0001F504 کت چرخشی: 🔴×{fa(wraps.get('red', 0))}  🔵×{fa(wraps.get('blue', 0))}"
+
+
+def _this_game_wrap_line(record: dict) -> str:
+    """Called out only when the just-finished game actually had one."""
+    from game import wraps_from_hands
+
+    w = record.get("wraps")
+    if w is None:
+        w = wraps_from_hands(record.get("hands") or [])
+    parts = [
+        f"{TEAM_COLOR[t]}×{fa(w.get(t, 0))}" for t in ("red", "blue") if w.get(t)
+    ]
+    if not parts:
+        return ""
+    return "\n\U0001F504 کت چرخشی این بازی: " + "  ".join(parts)
+
+
 def stats_text(state: dict) -> str:
-    from game import daily_breakdown, totals, game_day, now_tz, split_kot_totals
+    from game import (daily_breakdown, totals, game_day, now_tz, split_kot_totals,
+                      wrap_totals)
 
     by = daily_breakdown(state)
     if not by:
@@ -229,6 +257,9 @@ def stats_text(state: dict) -> str:
     split_line = _split_kot_line(split_kot_totals(state))
     if split_line:
         lines.append(split_line.lstrip("\n"))
+    wrap_line = _wrap_line(wrap_totals(state))
+    if wrap_line:
+        lines.append(wrap_line.lstrip("\n"))
     extras = lifetime_extras_text(state)
     if extras:
         lines.append("\n" + extras)

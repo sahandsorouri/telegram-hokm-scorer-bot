@@ -132,6 +132,17 @@ def kots_per_team(g: dict) -> dict:
     return out
 
 
+def wraps_from_hands(hands: list) -> dict:
+    """Count 'rotating kots' per team: hands whose kot pushed the score past
+    WIN_TARGET, so it wrapped back around (e.g. 6 + 3 -> 2). Only kots can wrap,
+    since a normal win (+1) can at most land exactly on WIN_TARGET."""
+    out = {"red": 0, "blue": 0}
+    for h in hands:
+        if h.get("wrapped"):
+            out[h["winner"]] += 1
+    return out
+
+
 def archive_game(state: dict) -> dict:
     g = state["active_game"]
     now = now_tz()
@@ -143,6 +154,7 @@ def archive_game(state: dict) -> dict:
         "winner": winner_team(g),
         "final_score": dict(g["score"]),
         "kots": kots_per_team(g),           # legacy total, kept for back-compat
+        "wraps": wraps_from_hands(g["hands"]),  # kots that pushed the score past 7
         "kots_normal": sk["normal"],         # team kotted as hakem (+2 each)
         "kots_hakem":  sk["hakem"],          # team kotted opponent who was hakem (+3 each)
         "initial_hakem": g.get("initial_hakem"),
@@ -375,6 +387,22 @@ def duration_percentile_faster(durations: list[float], this_dur: float) -> int |
     return round(100 * slower / len(durations))
 
 
+def wrap_totals(state: dict) -> dict:
+    """Lifetime rotating-kot counts across live records. Records logged before
+    per-hand tracking (and imported day tallies) carry no hand data, so they
+    contribute 0 - we count what we can prove, we never estimate here."""
+    total = _zero_team()
+    for rec in state["history"]:
+        if rec.get("imported"):
+            continue
+        w = rec.get("wraps")
+        if w is None:
+            w = wraps_from_hands(rec.get("hands") or [])
+        total["red"] += int(w.get("red", 0))
+        total["blue"] += int(w.get("blue", 0))
+    return total
+
+
 def today_summary(state: dict) -> dict:
     today = game_day(now_tz())
     by = daily_breakdown(state)
@@ -388,4 +416,5 @@ def today_summary(state: dict) -> dict:
         "total_wins": total_w,
         "total_kots": total_k,
         "split_kots": split,
+        "wraps": wrap_totals(state),
     }
