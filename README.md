@@ -7,6 +7,7 @@ Live: [@Hokmnightsbot](https://t.me/Hokmnightsbot)
 ## What it does
 
 - Record normal wins, kot, and quick undo
+- Rotating kot: a kot that pushes a team past 7 wraps the score around instead of ending the game (6 + 3 = 9 becomes 2), and each team's lifetime count is reported
 - Smart game day: before 6 AM counts as the previous day (for late-night games)
 - Daily history plus all-time totals
 - Import old games from one-line summaries
