@@ -83,6 +83,8 @@ async def _refresh_loop(application, chat_id: int):
                     g = state.get("active_game")
                     if not g:
                         return  # game ended; stop loop
+                    if game.is_paused(g):
+                        return  # paused: nothing ticks, resume restarts the loop
                     msg_id = g.get("score_board_message_id")
                     if not msg_id:
                         continue
@@ -90,7 +92,7 @@ async def _refresh_loop(application, chat_id: int):
                         await application.bot.edit_message_text(
                             chat_id=chat_id, message_id=msg_id,
                             text=msg.score_board_text(g),
-                            reply_markup=kb.main_kb(),
+                            reply_markup=kb.board_kb(g),
                             parse_mode=ParseMode.HTML,
                         )
                     except BadRequest as e:
@@ -140,7 +142,7 @@ async def _send_scoreboard_fresh(context, chat_id: int, state: dict):
     m = await context.bot.send_message(
         chat_id=chat_id,
         text=msg.score_board_text(g),
-        reply_markup=kb.main_kb(),
+        reply_markup=kb.board_kb(g),
         parse_mode=ParseMode.HTML,
     )
     g["score_board_message_id"] = m.message_id
@@ -158,7 +160,7 @@ async def _edit_scoreboard(context, chat_id: int, state: dict, *,
     if extra_text:
         text = text + "\n\n" + extra_text
     if reply_markup is None:
-        reply_markup = kb.main_kb()
+        reply_markup = kb.board_kb(g)
     if not msg_id:
         await _send_scoreboard_fresh(context, chat_id, state)
         return
@@ -357,6 +359,10 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await _cb_kot_choose(q, context, chat_id, state, data.split(":", 1)[1])
         elif data.startswith("kot1:"):
             await _cb_kot_first_hand(q, context, chat_id, state, data.split(":", 1)[1])
+        elif data == "pause":
+            await _cb_pause(q, context, chat_id, state)
+        elif data == "resume":
+            await _cb_resume(q, context, chat_id, state)
         elif data == "undo":
             await q.answer()
             await _do_undo(context, chat_id, state)
@@ -385,6 +391,9 @@ async def _cb_win(q, context, chat_id, state, team):
     if not g or game.game_ended(g):
         await q.answer(msg.stale_button())
         return
+    if game.is_paused(g):
+        await q.answer(msg.paused_notice())
+        return
     if team not in ("red", "blue"):
         await q.answer()
         return
@@ -402,6 +411,9 @@ async def _cb_kot_open(q, context, chat_id, state):
     g = state.get("active_game")
     if not g or game.game_ended(g):
         await q.answer(msg.stale_button())
+        return
+    if game.is_paused(g):
+        await q.answer(msg.paused_notice())
         return
     await q.answer()
     if not g["hands"]:
@@ -423,6 +435,9 @@ async def _cb_kot_first_hand(q, context, chat_id, state, payload):
     g = state.get("active_game")
     if not g or game.game_ended(g):
         await q.answer(msg.stale_button())
+        return
+    if game.is_paused(g):
+        await q.answer(msg.paused_notice())
         return
     if payload == "cancel":
         await q.answer()
@@ -463,6 +478,9 @@ async def _cb_kot_choose(q, context, chat_id, state, choice):
     if not g or game.game_ended(g):
         await q.answer(msg.stale_button())
         return
+    if game.is_paused(g):
+        await q.answer(msg.paused_notice())
+        return
     if choice == "cancel":
         await q.answer()
         await _edit_scoreboard(context, chat_id, state)
@@ -478,6 +496,47 @@ async def _cb_kot_choose(q, context, chat_id, state, choice):
     else:
         storage.save(chat_id, state)
         await _edit_scoreboard(context, chat_id, state)
+
+
+async def _cb_pause(q, context, chat_id, state):
+    g = state.get("active_game")
+    if not g or game.game_ended(g):
+        await q.answer(msg.stale_button())
+        return
+    if not game.pause_game(g):
+        await q.answer("بازی از قبل متوقفه")
+        await _edit_scoreboard(context, chat_id, state)
+        return
+    _cancel_refresh(chat_id)
+    events.append(chat_id, {
+        "type": "game_pause",
+        "score_at_pause": dict(g["score"]),
+        "hands_at_pause": len(g["hands"]),
+    })
+    storage.save(chat_id, state)
+    await q.answer("⏸ بازی متوقف شد")
+    await _edit_scoreboard(context, chat_id, state)
+
+
+async def _cb_resume(q, context, chat_id, state):
+    g = state.get("active_game")
+    if not g or game.game_ended(g):
+        await q.answer(msg.stale_button())
+        return
+    p = game.resume_game(g)
+    if p is None:
+        await q.answer("بازی در جریانه")
+        await _edit_scoreboard(context, chat_id, state)
+        return
+    events.append(chat_id, {
+        "type": "game_resume",
+        "paused_from": p["from"],
+        "paused_seconds": game.paused_seconds([p]),
+        "game_day": g["game_day"],
+    })
+    storage.save(chat_id, state)
+    await q.answer("▶️ بازی ادامه پیدا کرد")
+    await _edit_scoreboard(context, chat_id, state)
 
 
 async def _cb_undo_ended(q, context, chat_id, state):

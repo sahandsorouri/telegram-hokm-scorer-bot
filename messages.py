@@ -8,23 +8,48 @@ def fa(n) -> str:
     return str(n).translate(_FA_DIGITS)
 
 
+def _format_seconds(total_seconds: float) -> str:
+    total = int(total_seconds)
+    if total < 60:
+        return f"{fa(total)} ثانیه"
+    minutes = total // 60
+    if minutes < 60:
+        return f"{fa(minutes)} دقیقه"
+    hours = minutes // 60
+    mins = minutes % 60
+    if mins == 0:
+        return f"{fa(hours)} ساعت"
+    return f"{fa(hours)} ساعت و {fa(mins)} دقیقه"
+
+
 def _format_duration(started_at: str, ended_at: str) -> str:
     try:
         start = datetime.fromisoformat(started_at)
         end = datetime.fromisoformat(ended_at)
-        total = int((end - start).total_seconds())
-        if total < 60:
-            return f"{fa(total)} ثانیه"
-        minutes = total // 60
-        if minutes < 60:
-            return f"{fa(minutes)} دقیقه"
-        hours = minutes // 60
-        mins = minutes % 60
-        if mins == 0:
-            return f"{fa(hours)} ساعت"
-        return f"{fa(hours)} ساعت و {fa(mins)} دقیقه"
     except (TypeError, ValueError):
         return ""
+    return _format_seconds((end - start).total_seconds())
+
+
+def _record_duration_text(record: dict) -> str:
+    """Play time of a finished game: start to end, minus paused time."""
+    from game import record_duration_sec
+
+    dur = record_duration_sec(record)
+    if dur is None:
+        return ""
+    return _format_seconds(dur)
+
+
+def _pause_line(record: dict) -> str:
+    """Shown only for a game that was paused: how long it sat paused."""
+    try:
+        paused = float(record.get("paused_seconds") or 0)
+    except (TypeError, ValueError):
+        paused = 0.0
+    if paused < 1:
+        return ""
+    return f"\n⏸ توقف وسط بازی: {_format_seconds(paused)}"
 
 
 TEAM_LABEL = {"red": "🔴 قرمز", "blue": "🔵 آبی"}
@@ -76,9 +101,20 @@ def score_board_text(g: dict) -> str:
         if rel:
             label = "آخرین دست" if g["hands"] else "شروع بازی"
             update_line = f"\n🕐 {label}: {rel}"
+    score_line = f"\n🔴 قرمز  <b>{fa(red)} — {fa(blue)}</b>  آبی 🔵\n"
+    if g.get("paused_at"):
+        return (
+            "⏸ <b>بازی متوقف شده</b>\n"
+            f"{score_line}"
+            "━━━━━━━━━━━━━━━━━\n"
+            f"دست {fa(hand_num)}{hakem_line}\n"
+            f"{_last_hand_line(g)}\n"
+            "\n⏸ زمان توقف توی مدت بازی حساب نمیشه.\n"
+            "هر وقت برگشتین «▶️ ادامه بازی» رو بزنین."
+        )
     return (
         "🃏 <b>بازی در جریان</b>\n"
-        f"\n🔴 قرمز  <b>{fa(red)} — {fa(blue)}</b>  آبی 🔵\n"
+        f"{score_line}"
         "━━━━━━━━━━━━━━━━━\n"
         f"دست {fa(hand_num)}{hakem_line}\n"
         f"{_last_hand_line(g)}"
@@ -90,8 +126,9 @@ def end_game_text(record: dict, today: dict, state: dict | None = None) -> str:
     winner = record["winner"]
     fs = record["final_score"]
 
-    duration = _format_duration(record.get("started_at", ""), record.get("ended_at", ""))
+    duration = _record_duration_text(record)
     duration_line = f"\n⏱ مدت بازی: {duration}" if duration else ""
+    duration_line += _pause_line(record)
 
     today_line = (
         f"🔴 {fa(today['today_wins']['red'])} — {fa(today['today_wins']['blue'])} 🔵"
@@ -163,17 +200,18 @@ def end_game_percentile_text(record: dict, state: dict) -> str:
     """One-line speed percentile for the just-finished game, in plain language.
     Empty if not enough data or game pre-dates the cutoff."""
     from datetime import datetime
-    from game import lifetime_stats, duration_percentile_faster
+    from game import lifetime_stats, duration_percentile_faster, record_duration_sec
     import config as _cfg
 
     try:
         start = datetime.fromisoformat(record["started_at"])
-        end = datetime.fromisoformat(record["ended_at"])
     except (KeyError, TypeError, ValueError):
         return ""
     if start < _cfg.STATS_DURATION_CUTOFF:
         return ""
-    dur = (end - start).total_seconds()
+    dur = record_duration_sec(record)
+    if dur is None:
+        return ""
     durs = lifetime_stats(state)["durations_after_cutoff"]
     if len(durs) < 5:
         return ""
@@ -275,6 +313,7 @@ def help_text() -> str:
         "• /stats — تاریخچه بازی‌ها\n"
         "• /undo — بازگشت آخرین دست\n"
         "• /endgame — پایان دستی بازی\n"
+        "• دکمه‌ی «⏸ توقف»: وقتی بازی نصفه میمونه بزنین؛ زمان توقف توی مدت بازی حساب نمیشه\n"
         "• /import — ثبت نتیجه روز قدیم\n"
         "• /help — همین راهنما\n\n"
         "<b>قواعد امتیاز:</b>\n"
@@ -351,6 +390,10 @@ def cant_undo_ended() -> str:
 
 def stale_button() -> str:
     return "این دکمه دیگه فعال نیست."
+
+
+def paused_notice() -> str:
+    return "بازی متوقفه. اول «▶️ ادامه بازی» رو بزن."
 
 
 def kot_team_prompt() -> str:

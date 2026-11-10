@@ -49,6 +49,51 @@ def new_game() -> dict:
     }
 
 
+def is_paused(g: dict | None) -> bool:
+    return bool(g and g.get("paused_at"))
+
+
+def _pause_seconds(p: dict) -> float:
+    try:
+        a = datetime.fromisoformat(p["from"])
+        b = datetime.fromisoformat(p["to"])
+    except (KeyError, TypeError, ValueError):
+        return 0.0
+    return max(0.0, (b - a).total_seconds())
+
+
+def paused_seconds(pauses: list | None) -> float:
+    """Total length of the finished pauses of a game, in seconds."""
+    return sum(_pause_seconds(p) for p in (pauses or []))
+
+
+def pause_game(g: dict) -> bool:
+    """Stop the clock. Returns False if the game is already paused."""
+    if g.get("paused_at"):
+        return False
+    g["paused_at"] = now_tz().isoformat()
+    return True
+
+
+def resume_game(g: dict) -> dict | None:
+    """Restart the clock. The pause is stored in g["pauses"] so it is left out of
+    the game's duration. A long pause that ends on another game day moves the game
+    to that day (the original day is kept in game_day_started). Returns the pause,
+    or None if the game was not paused."""
+    start = g.get("paused_at")
+    if not start:
+        return None
+    now = now_tz()
+    p = {"from": start, "to": now.isoformat()}
+    g.setdefault("pauses", []).append(p)
+    g["paused_at"] = None
+    new_day = game_day(now)
+    if _pause_seconds(p) >= config.PAUSE_NEW_DAY_SECONDS and new_day != g.get("game_day"):
+        g.setdefault("game_day_started", g.get("game_day"))
+        g["game_day"] = new_day
+    return p
+
+
 def _apply_wrap(score: dict, team: str) -> bool:
     """If team's score went strictly above WIN_TARGET, subtract WIN_TARGET.
     Returns True if a wrap happened."""
@@ -161,6 +206,13 @@ def archive_game(state: dict) -> dict:
         "hands_count": len(g["hands"]),
         "hands": list(g["hands"]),
     }
+    # Pause data is only written for games that were actually paused, so a normal
+    # game's record looks exactly as it always did.
+    if g.get("pauses"):
+        record["pauses"] = list(g["pauses"])
+        record["paused_seconds"] = paused_seconds(g["pauses"])
+    if g.get("game_day_started"):
+        record["game_day_started"] = g["game_day_started"]
     state["history"].append(record)
     state["last_ended_game"] = {
         "ended_at": now.isoformat(),
@@ -308,16 +360,24 @@ def _reconstruct_hands_count(rec: dict) -> int | None:
     return max(0, points - total_kots - hakem_kots)
 
 
-def _record_duration_sec(rec: dict) -> float | None:
-    """Wall-clock duration of a live (non-imported) record, in seconds. None if unavailable."""
+def record_duration_sec(rec: dict) -> float | None:
+    """Play time of a live (non-imported) record, in seconds: start to end, minus
+    any paused time. None if unavailable."""
     if rec.get("imported"):
         return None
     try:
         start = datetime.fromisoformat(rec["started_at"])
         end = datetime.fromisoformat(rec["ended_at"])
-        return (end - start).total_seconds()
     except (KeyError, TypeError, ValueError):
         return None
+    try:
+        paused = float(rec.get("paused_seconds") or 0)
+    except (TypeError, ValueError):
+        paused = 0.0
+    return max(0.0, (end - start).total_seconds() - paused)
+
+
+_record_duration_sec = record_duration_sec
 
 
 def lifetime_stats(state: dict) -> dict:

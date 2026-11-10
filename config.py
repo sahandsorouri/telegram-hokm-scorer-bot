@@ -29,6 +29,11 @@ STATS_DURATION_CUTOFF = datetime.fromisoformat("2026-05-07T21:30:00+03:30")
 # Live scoreboard auto-refresh interval (used in step 5).
 LIVE_REFRESH_SECONDS = 60
 
+# A paused game that is resumed on another game day counts for the day it is
+# resumed (and won) on, but only if the pause was at least this long. A short
+# break that happens to cross the 6am cutoff keeps its original day.
+PAUSE_NEW_DAY_SECONDS = 6 * 3600
+
 # Legacy kots (logged before normal/hakem split tracking) are estimated: this
 # fraction is assumed to have been hakem-kots (+3), the rest normal kots (+2).
 LEGACY_HAKEM_KOT_RATIO = 0.3

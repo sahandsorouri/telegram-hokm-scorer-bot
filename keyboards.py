@@ -10,9 +10,22 @@ def main_kb() -> InlineKeyboardMarkup:
         [InlineKeyboardButton("⚡ کت!", callback_data="kot")],
         [
             InlineKeyboardButton("↩️ Undo", callback_data="undo"),
+            InlineKeyboardButton("⏸ توقف", callback_data="pause"),
             InlineKeyboardButton("📊 آمار", callback_data="stats"),
         ],
     ])
+
+
+def paused_kb() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("▶️ ادامه بازی", callback_data="resume")],
+        [InlineKeyboardButton("📊 آمار", callback_data="stats")],
+    ])
+
+
+def board_kb(g: dict) -> InlineKeyboardMarkup:
+    """Keyboard for the scoreboard: resume-only while the game is paused."""
+    return paused_kb() if g.get("paused_at") else main_kb()
 
 
 def kot_kb() -> InlineKeyboardMarkup:

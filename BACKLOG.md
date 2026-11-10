@@ -11,6 +11,8 @@ Small enhancements. Mostly stats surfaced in the end-of-game report and `/stats`
 
 ## Done
 
+- [x] **Pause button**: `⏸ توقف` on the scoreboard stops the clock, `▶️ ادامه بازی` restarts it; paused time is left out of the game's duration and the lifetime time stats. Shipped 2026-11-10, with a one-off fix for the 7 to 10 Nov game that sat open for 67 hours.
+
 - [x] **Rotating kot count per team** — kots that pushed the score past 7 and wrapped it around. Shipped 2026-08-28 (`c4ec135`): lifetime line in the end-of-game report and `/stats`, plus a this-game callout when one happens.
 
 ## Notes
