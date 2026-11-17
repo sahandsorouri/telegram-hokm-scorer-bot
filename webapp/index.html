@@ -33,6 +33,7 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;touch-
 /* header */
 .top{display:flex;align-items:center;justify-content:space-between;margin:4px 2px 12px}
 .topR{display:flex;align-items:center;gap:8px}
+.snd.on{background:var(--gold, #f0a92e);border-color:transparent}
 .snd{width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:var(--card);font-size:18px;line-height:1;padding:0;cursor:pointer}
 .brand{display:flex;align-items:center;gap:10px;font-weight:900;font-size:24px}
 .brand .suits{font-size:15px;letter-spacing:2px;color:var(--muted)}
@@ -214,8 +215,8 @@ let V = null, prev = null, tab = "play", busy = false, pollT = null, lastHash = 
 /* ── sound: synthesized with Web Audio, no files ── */
 const SND = {ctx: null, on: true};
 try{ SND.on = localStorage.getItem("hokm-sound") !== "off"; }catch(e){}
-function audio(){
-  if(!SND.on) return null;
+function audio(){ return SND.on ? ac() : null; }
+function ac(){
   try{
     if(!SND.ctx) SND.ctx = new (window.AudioContext || window.webkitAudioContext)();
     if(SND.ctx.state === "suspended") SND.ctx.resume();
@@ -261,6 +262,82 @@ function sfx(kind){
     case "error": tone(140, 0, 0.25, "sawtooth", 0.08); break;
   }
 }
+/* ── music: a soft generative loop (Web Audio, no files), local to this phone ── */
+const MUS = {on: false, timer: null, next: 0, step: 0, bar: 0, bus: null, mel: 72};
+const mf = m => 440 * Math.pow(2, (m - 69) / 12);
+const CHORDS = [[48, 51, 55], [44, 48, 51], [46, 50, 53], [43, 47, 50]];   // Cm Ab Bb G
+const SCALE = [60, 62, 63, 65, 67, 68, 71, 72, 74, 75, 77, 79, 80, 83, 84];  // C harmonic minor
+function voice(f, t, len, type, vol, attack, dest){
+  const c = SND.ctx; if(!c) return;
+  const o = c.createOscillator(), g = c.createGain();
+  o.type = type; o.frequency.setValueAtTime(f, t);
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + (attack || 0.01));
+  g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+  o.connect(g).connect(dest || MUS.bus); o.start(t); o.stop(t + len + 0.05);
+}
+function drum(t, kind){
+  const c = SND.ctx;
+  if(kind === "dum"){
+    const o = c.createOscillator(), g = c.createGain();
+    o.frequency.setValueAtTime(110, t); o.frequency.exponentialRampToValueAtTime(48, t + 0.18);
+    g.gain.setValueAtTime(0.5, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
+    o.connect(g).connect(MUS.bus); o.start(t); o.stop(t + 0.4); return;
+  }
+  const len = kind === "tak" ? 0.09 : 0.04, n = Math.floor(c.sampleRate * len), buf = c.createBuffer(1, n, c.sampleRate), d = buf.getChannelData(0);
+  for(let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 3);
+  const src = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
+  src.buffer = buf; f.type = "bandpass"; f.frequency.value = kind === "tak" ? 2600 : 5000; f.Q.value = 1.2;
+  g.gain.value = kind === "tak" ? 0.32 : 0.12;
+  src.connect(f).connect(g).connect(MUS.bus); src.start(t);
+}
+function pluck(m, t, vol){
+  voice(mf(m), t, 0.7, "triangle", vol, 0.005);
+  voice(mf(m) * 2, t, 0.25, "sine", vol * 0.25, 0.005);
+  voice(mf(m), t + 0.28, 0.5, "triangle", vol * 0.3, 0.005);   // soft echo
+}
+function musicStep(t){
+  const st = MUS.step % 16, ch = CHORDS[MUS.bar % 4], sd = 60 / 84 / 4;
+  if(st === 0){
+    ch.forEach(m => { voice(mf(m + 12), t, sd * 16, "triangle", 0.035, 0.6); voice(mf(m + 12) * 1.004, t, sd * 16, "sine", 0.025, 0.8); });
+  }
+  if(st === 0 || st === 10) voice(mf(ch[0] - 12), t, 0.6, "sine", 0.22, 0.01);
+  if(st === 6) voice(mf(ch[0] - 5), t, 0.4, "sine", 0.14, 0.01);
+  if(st === 0 || st === 6 || st === 10) drum(t, "dum");
+  if(st === 4 || st === 12) drum(t, "tak");
+  if(st % 2 === 1 && Math.random() < 0.45) drum(t, "tik");
+  const rest = MUS.bar % 8 === 7;
+  if(!rest && [0, 3, 6, 8, 10, 12, 14].includes(st) && Math.random() < (st === 0 ? 0.95 : 0.6)){
+    let i = SCALE.indexOf(MUS.mel); if(i < 0) i = 7;
+    if(st === 0){ const tones = SCALE.filter(m => ch.some(c => (m - c) % 12 === 0)); MUS.mel = tones.reduce((a, b) => Math.abs(b - MUS.mel) < Math.abs(a - MUS.mel) ? b : a); }
+    else { i = Math.max(2, Math.min(SCALE.length - 1, i + [-2, -1, -1, 1, 1, 2][Math.floor(Math.random() * 6)])); MUS.mel = SCALE[i]; }
+    pluck(MUS.mel, t, 0.11);
+  }
+  MUS.step++; if(MUS.step % 16 === 0) MUS.bar++;
+}
+function musicTick(){
+  const c = SND.ctx, sd = 60 / 84 / 4;
+  while(MUS.next < c.currentTime + 0.25){ musicStep(MUS.next); MUS.next += sd; }
+}
+function musicPlay(){
+  const c = ac(); if(!c || MUS.timer) return;
+  if(!MUS.bus){
+    MUS.bus = c.createGain(); const lp = c.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 3200;
+    MUS.bus.connect(lp).connect(c.destination);
+  }
+  MUS.bus.gain.cancelScheduledValues(c.currentTime); MUS.bus.gain.setValueAtTime(0.0001, c.currentTime);
+  MUS.bus.gain.exponentialRampToValueAtTime(0.5, c.currentTime + 1.2);
+  MUS.next = c.currentTime + 0.08; MUS.timer = setInterval(musicTick, 60); musicTick();
+}
+function musicStop(){
+  clearInterval(MUS.timer); MUS.timer = null;
+  const c = SND.ctx; if(c && MUS.bus){ MUS.bus.gain.cancelScheduledValues(c.currentTime); MUS.bus.gain.setTargetAtTime(0.0001, c.currentTime, 0.15); }
+}
+function toggleMusic(){
+  MUS.on = !MUS.on; haptic("light");
+  if(MUS.on) musicPlay(); else musicStop();
+  const b = document.getElementById("mus"); if(b) b.classList.toggle("on", MUS.on);
+}
+function musicVisibility(){ if(!MUS.on) return; if(document.hidden) musicStop(); else musicPlay(); }
 function toggleSound(){
   SND.on = !SND.on; try{ localStorage.setItem("hokm-sound", SND.on ? "on" : "off"); }catch(e){}
   const b = document.getElementById("snd"); if(b) b.textContent = SND.on ? "🔊" : "🔇";
@@ -397,7 +474,7 @@ function header(){
   const g = V.game;
   const live = g ? (g.paused ? `<span class="dot off"></span>متوقف` : `<span class="dot"></span><span id="clk" dir="ltr">${clock(g.played_seconds)}</span>`) :
     `<span class="dot off"></span>بازی‌ای در جریان نیست`;
-  return `<div class="top"><div class="brand">حکم <span class="suits">♠♥♣♦</span></div><div class="topR"><button class="snd" id="snd" aria-label="صدا">${SND.on ? "🔊" : "🔇"}</button><span class="pill">${live}</span></div></div>`;
+  return `<div class="top"><div class="brand">حکم <span class="suits">♠♥♣♦</span></div><div class="topR"><button class="snd${MUS.on ? " on" : ""}" id="mus" aria-label="موزیک">🎵</button><button class="snd" id="snd" aria-label="صدا">${SND.on ? "🔊" : "🔇"}</button><span class="pill">${live}</span></div></div>`;
 }
 let clockBase = null;
 function tickClock(){ const el = $("#clk"); if(!el || !V.game) return; }
@@ -602,6 +679,7 @@ function bind(){
     confirmBox("این بازی بدون ثبت پاک بشه؟", () => act("abort")));
   document.querySelectorAll("[data-open]").forEach(el => el.onclick = () => { el.classList.toggle("open"); haptic("light"); });
   const sb = document.getElementById("snd"); if(sb) sb.onclick = toggleSound;
+  const mb = document.getElementById("mus"); if(mb) mb.onclick = toggleMusic;
   document.querySelectorAll("[data-more]").forEach(b => b.onclick = () => { histLimit += 15; render(); });
 }
 
@@ -624,7 +702,7 @@ if(tg){
   try{ if(tg.disableVerticalSwipes) tg.disableVerticalSwipes(); }catch(e){}
 }
 function poll(){ clearTimeout(pollT); pollT = setTimeout(async () => { if(!document.hidden && !busy) await refresh(); poll(); }, 2500); }
-document.addEventListener("visibilitychange", () => { if(!document.hidden) refresh(); });
+document.addEventListener("visibilitychange", () => { if(!document.hidden) refresh(); musicVisibility(); });
 if(!initData) fatal(); else { refresh().then(poll); }
 </script>
 </body>
