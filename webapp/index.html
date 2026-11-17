@@ -378,7 +378,8 @@ function tick(){
 
 /* ── render ── */
 function apply(v, mine){
-  const h = JSON.stringify([v.game, v.history.length, v.can_undo_ended, v.today]);
+  // The clock ticks on every poll; leave it out so the page only redraws on real changes.
+  const h = JSON.stringify([v.game, v.history.length, v.can_undo_ended, v.today], (k, x) => k === "played_seconds" ? undefined : x);
   const changed = h !== lastHash; lastHash = h;
   prev = V; V = v;
   $("#tabs").hidden = false;
