@@ -67,3 +67,4 @@
 - Hosting (LIVE setup 17 Nov): nginx + certbot on `hokm.91.107.179.127.nip.io` -> `127.0.0.1:8050`; compose needs `ports: ["127.0.0.1:8050:8050"]`. He must enable the Main Mini App in BotFather. Group link: `https://t.me/Hokmnightsbot?startapp=g<digits>`.
 - Local test: no browser on the laptop; use docker `mcr.microsoft.com/playwright:v1.48.2-noble` with `--network host`.
 - LIVE 17 Nov 2026: deployed right after a game ended; Main App enabled in BotFather by him; WEBAPP_LINK on, so the group scoreboard has the app row. Pre-deploy data backup ~/hokm-backups/data-pre-webapp-20261117-1717.tar.gz. neda-guard 54 OK.
+- Group has a pinned message (id 4404, 17 Nov) with the app button: Telegram allows a web app menu button only in private chats, so a pin is the closest to a button next to the group input.
