@@ -6,6 +6,11 @@ services:
     env_file: .env
     environment:
       - TZ=Etc/UTC
+      - WEBAPP_URL=https://hokm.91.107.179.127.nip.io/
+      # Set after the Main Mini App is enabled in BotFather:
+      - WEBAPP_LINK=
+    ports:
+      - "127.0.0.1:8050:8050"
     volumes:
       - .:/app
     working_dir: /app

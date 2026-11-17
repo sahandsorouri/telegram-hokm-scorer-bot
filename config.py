@@ -37,3 +37,12 @@ PAUSE_NEW_DAY_SECONDS = 6 * 3600
 # Legacy kots (logged before normal/hakem split tracking) are estimated: this
 # fraction is assumed to have been hakem-kots (+3), the rest normal kots (+2).
 LEGACY_HAKEM_KOT_RATIO = 0.3
+
+# Mini App (webapi.py). The web server runs inside the bot process.
+WEB_HOST = os.environ.get("WEB_HOST", "0.0.0.0")
+WEB_PORT = int(os.environ.get("WEB_PORT", "8050"))
+# Public https URL of the Mini App page (set as the private-chat menu button).
+WEBAPP_URL = os.environ.get("WEBAPP_URL", "").strip()
+# t.me link that opens the Mini App inside a group, e.g. https://t.me/Hokmnightsbot?startapp
+# (needs the Main Mini App switched on in BotFather). Empty = no app button on the boards.
+WEBAPP_LINK = os.environ.get("WEBAPP_LINK", "").strip()

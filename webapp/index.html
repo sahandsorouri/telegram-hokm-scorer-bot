@@ -1,0 +1,565 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>حکم</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+@font-face{font-family:Vazirmatn;font-weight:100 900;font-display:swap;
+  src:url(https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/fonts/webfonts/Vazirmatn[wght].woff2) format("woff2")}
+:root{
+  --bg:#f6eee2; --bg2:#efe3d1; --card:#fffaf3; --ink:#2b2118; --muted:#8c7b67; --line:#e6d8c3;
+  --felt:#1f6b4f; --felt2:#174f3b; --gold:#f0a92e; --gold-ink:#5a3a00;
+  --red:#e2483d; --red-soft:#fde3df; --blue:#2f6fe0; --blue-soft:#dfe9fd;
+  --shadow:0 6px 18px rgba(80,50,20,.12); --r:22px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){
+  --bg:#15120f; --bg2:#1d1914; --card:#231e18; --ink:#f6ece0; --muted:#a8977f; --line:#352d24;
+  --felt:#23795a; --felt2:#1a5c44; --gold:#ffc04d; --gold-ink:#3b2600;
+  --red:#ff6a5c; --red-soft:#3a1f1c; --blue:#5b93ff; --blue-soft:#1c2740;
+  --shadow:0 6px 18px rgba(0,0,0,.35)}}
+:root[data-theme=dark]{
+  --bg:#15120f; --bg2:#1d1914; --card:#231e18; --ink:#f6ece0; --muted:#a8977f; --line:#352d24;
+  --felt:#23795a; --felt2:#1a5c44; --gold:#ffc04d; --gold-ink:#3b2600;
+  --red:#ff6a5c; --red-soft:#3a1f1c; --blue:#5b93ff; --blue-soft:#1c2740;
+  --shadow:0 6px 18px rgba(0,0,0,.35)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:Vazirmatn,system-ui,sans-serif}
+body{min-height:100vh;padding-bottom:calc(84px + env(safe-area-inset-bottom));overflow-x:hidden}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;touch-action:manipulation}
+.wrap{max-width:520px;margin:0 auto;padding:14px 16px}
+
+/* header */
+.top{display:flex;align-items:center;justify-content:space-between;margin:4px 2px 12px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:900;font-size:24px}
+.brand .suits{font-size:15px;letter-spacing:2px;color:var(--muted)}
+.pill{display:inline-flex;align-items:center;gap:6px;background:var(--card);border:1px solid var(--line);
+  padding:6px 12px;border-radius:999px;font-size:14px;font-weight:600;color:var(--muted)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--felt);box-shadow:0 0 0 0 var(--felt);animation:ping 1.8s infinite}
+.dot.off{background:var(--muted);animation:none}
+@keyframes ping{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--felt) 60%,transparent)}100%{box-shadow:0 0 0 9px transparent}}
+
+/* felt table */
+.table{position:relative;background:radial-gradient(120% 90% at 50% 0%,var(--felt),var(--felt2));
+  border-radius:28px;padding:16px;box-shadow:var(--shadow),inset 0 0 0 3px rgba(255,255,255,.06);overflow:hidden}
+.table::before{content:"♠ ♥ ♣ ♦";position:absolute;inset:auto 0 6px 0;text-align:center;color:rgba(255,255,255,.08);font-size:13px;letter-spacing:10px}
+.teams{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.team{position:relative;background:var(--card);border-radius:20px;padding:14px 10px 12px;text-align:center;
+  transition:transform .25s}
+.team.red{box-shadow:inset 0 -5px 0 var(--red)} .team.blue{box-shadow:inset 0 -5px 0 var(--blue)}
+.team .name{font-weight:800;font-size:17px;display:flex;align-items:center;justify-content:center;gap:6px}
+.team.red .name{color:var(--red)} .team.blue .name{color:var(--blue)}
+.score{font-size:76px;line-height:1;font-weight:900;margin:6px 0 4px;font-variant-numeric:tabular-nums}
+.team.bump .score{animation:bump .5s cubic-bezier(.3,1.6,.5,1)}
+@keyframes bump{0%{transform:scale(1)}40%{transform:scale(1.35)}100%{transform:scale(1)}}
+.pips{display:flex;justify-content:center;gap:5px;direction:rtl}
+.pip{width:11px;height:11px;border-radius:50%;background:var(--line);transition:background .3s}
+.team.red .pip.on{background:var(--red)} .team.blue .pip.on{background:var(--blue)}
+.crown{position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:var(--gold);color:var(--gold-ink);
+  font-size:13px;font-weight:800;padding:3px 10px;border-radius:999px;box-shadow:0 3px 8px rgba(0,0,0,.2);
+  animation:crown .6s cubic-bezier(.3,1.6,.5,1)}
+@keyframes crown{from{transform:translateX(-50%) translateY(10px) scale(.4);opacity:0}}
+.meta{display:flex;justify-content:space-between;color:rgba(255,255,255,.85);font-size:14px;margin:12px 4px 4px;font-weight:600}
+.hands{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;min-height:30px}
+.chip{display:inline-flex;align-items:center;gap:3px;height:28px;padding:0 9px;border-radius:999px;font-size:13px;font-weight:800;
+  background:rgba(255,255,255,.14);color:#fff;animation:pop .35s cubic-bezier(.3,1.6,.5,1)}
+.chip.red{background:var(--red)} .chip.blue{background:var(--blue)}
+.chip.kot{outline:2px solid var(--gold)}
+.chip.wrap{background:linear-gradient(135deg,var(--gold),#ff7a59);color:#2b1600}
+.chip.small{height:24px;font-size:12px;padding:0 7px}
+@keyframes pop{from{transform:scale(.3);opacity:0}}
+.empty-hands{color:rgba(255,255,255,.6);font-size:14px;padding:4px}
+
+.paused{position:absolute;inset:0;background:rgba(10,20,15,.72);backdrop-filter:blur(3px);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:14px;color:#fff;z-index:3;border-radius:28px}
+.paused .big{font-size:22px;font-weight:800}
+
+/* actions */
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}
+.btn{border-radius:20px;padding:18px 10px;font-weight:900;font-size:20px;box-shadow:var(--shadow);transition:transform .12s,filter .12s;
+  display:flex;align-items:center;justify-content:center;gap:8px;user-select:none}
+.btn:active{transform:scale(.95);filter:brightness(.95)}
+.btn.red{background:var(--red);color:#fff} .btn.blue{background:var(--blue);color:#fff}
+.btn.kot{grid-column:1/-1;background:var(--gold);color:var(--gold-ink);font-size:22px}
+.btn.felt{background:var(--felt);color:#fff;grid-column:1/-1}
+.btn[disabled]{opacity:.45;pointer-events:none}
+.mini{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}
+.mbtn{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px 6px;font-weight:700;font-size:15px;color:var(--ink)}
+.mbtn:active{transform:scale(.96)}
+.mbtn[disabled]{opacity:.4;pointer-events:none}
+
+/* cards */
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px;margin-top:14px;box-shadow:var(--shadow)}
+.card h3{margin:0 0 12px;font-size:17px;font-weight:800;display:flex;align-items:center;gap:8px}
+.sub{color:var(--muted);font-size:14px}
+.vs{display:flex;align-items:center;justify-content:center;gap:16px;font-weight:900;font-size:44px}
+.vs .r{color:var(--red)} .vs .b{color:var(--blue)} .vs .sep{color:var(--muted);font-size:24px}
+.bar{display:flex;height:16px;border-radius:999px;overflow:hidden;background:var(--line);margin:10px 0 6px;direction:rtl}
+.bar .r{background:var(--red);transition:width .6s} .bar .b{background:var(--blue);transition:width .6s}
+.barlbl{display:flex;justify-content:space-between;font-size:14px;font-weight:700}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tile{background:var(--bg2);border-radius:16px;padding:12px}
+.tile .v{font-size:24px;font-weight:900}
+.tile .l{font-size:13px;color:var(--muted);margin-top:2px}
+.row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-top:1px solid var(--line);gap:10px}
+.row:first-of-type{border-top:0}
+.row .k{font-weight:700} .row .v{font-weight:800;text-align:left}
+.tag{display:inline-flex;align-items:center;gap:4px;font-weight:800;font-size:14px;padding:2px 9px;border-radius:999px}
+.tag.red{background:var(--red-soft);color:var(--red)} .tag.blue{background:var(--blue-soft);color:var(--blue)}
+.form{display:flex;gap:5px;flex-wrap:wrap;direction:rtl}
+.form i{width:16px;height:16px;border-radius:5px;display:block}
+.form i.red{background:var(--red)} .form i.blue{background:var(--blue)}
+.hero{text-align:center;padding:26px 16px}
+.fan{position:relative;height:118px;margin:0 auto 8px;width:200px}
+.pc{position:absolute;left:50%;bottom:0;width:62px;height:92px;margin-left:-31px;background:#fffaf3;border-radius:10px;
+  box-shadow:0 6px 14px rgba(0,0,0,.3);transform-origin:50% 140%;display:flex;align-items:center;justify-content:center;
+  font-size:34px;font-family:serif;animation:deal .7s cubic-bezier(.3,1.4,.5,1) backwards}
+.pc::before,.pc::after{content:attr(data-s);position:absolute;font-size:14px;line-height:1}
+.pc::before{top:6px;left:7px}.pc::after{bottom:6px;right:7px;transform:rotate(180deg)}
+.pc.r{color:#d93b30}.pc.k{color:#1d1a17}
+@keyframes deal{from{transform:translateY(60px) rotate(0);opacity:0}}
+.fan:hover .pc{filter:brightness(1.03)}
+@keyframes float{50%{transform:translateY(-6px) rotate(-3deg)}}
+.hero h2{margin:6px 0 4px;font-size:22px;color:#fff}
+.hero p{margin:0 0 18px;color:rgba(255,255,255,.75)}
+.day{margin-top:18px}
+.dayhead{display:flex;justify-content:space-between;align-items:center;font-weight:800;padding:0 4px 6px}
+.game{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:12px 14px;margin-top:8px}
+.game .line{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.game .res{font-weight:900;font-size:18px}
+.game .extra{display:none;margin-top:10px;flex-wrap:wrap;gap:5px}
+.game.open .extra{display:flex}
+.badge{font-size:12px;font-weight:800;padding:2px 8px;border-radius:999px;background:var(--bg2);color:var(--muted)}
+.badge.gold{background:var(--gold);color:var(--gold-ink)}
+
+/* tabs */
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;padding:8px 12px calc(8px + env(safe-area-inset-bottom));
+  background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(12px);border-top:1px solid var(--line)}
+.tabs .in{max-width:520px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.tab{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0;border-radius:14px;font-size:12px;font-weight:700;color:var(--muted)}
+.tab .ic{font-size:21px;filter:grayscale(1);opacity:.7;transition:.2s}
+.tab.on{color:var(--ink);background:var(--card)} .tab.on .ic{filter:none;opacity:1;transform:translateY(-1px) scale(1.08)}
+.view{display:none} .view.on{display:block;animation:fade .25s}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}}
+
+/* sheet */
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:40;opacity:0;pointer-events:none;transition:.2s}
+.scrim.on{opacity:1;pointer-events:auto}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:41;background:var(--card);border-radius:26px 26px 0 0;
+  padding:10px 16px calc(20px + env(safe-area-inset-bottom));transform:translateY(105%);transition:transform .3s cubic-bezier(.2,.9,.3,1)}
+.sheet{visibility:hidden}.sheet.on{transform:none;visibility:visible}
+.sheet .grab{width:44px;height:5px;border-radius:9px;background:var(--line);margin:0 auto 12px}
+.sheet h3{text-align:center;margin:4px 0 4px;font-size:20px}
+.sheet .sub{text-align:center;margin-bottom:14px}
+.sheet .in{max-width:520px;margin:0 auto}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.seg button{border-radius:16px;padding:14px;font-weight:800;background:var(--bg2);border:2px solid transparent}
+.seg button.on.red{border-color:var(--red);color:var(--red)} .seg button.on.blue{border-color:var(--blue);color:var(--blue)}
+
+/* fx */
+#fx{position:fixed;inset:0;pointer-events:none;z-index:60}
+.stamp{position:fixed;left:50%;top:38%;z-index:61;transform:translate(-50%,-50%);pointer-events:none;text-align:center;
+  font-weight:900;font-size:46px;color:var(--gold-ink);background:var(--gold);padding:14px 30px 16px;border-radius:26px;
+  box-shadow:0 14px 40px rgba(0,0,0,.35),inset 0 0 0 4px rgba(255,255,255,.35);animation:stamp 1.6s ease forwards;white-space:nowrap}
+.stamp.red{background:var(--red);color:#fff}.stamp.blue{background:var(--blue);color:#fff}
+.stamp small{display:block;font-size:18px;font-weight:800;margin-top:2px;opacity:.9}
+@keyframes stamp{0%{transform:translate(-50%,-50%) scale(3) rotate(-12deg);opacity:0}15%{transform:translate(-50%,-50%) scale(1) rotate(-6deg);opacity:1}
+  80%{opacity:1}100%{transform:translate(-50%,-60%) scale(.9) rotate(-6deg);opacity:0}}
+.stamp.spin{animation:spinstamp 1.9s ease forwards}
+@keyframes spinstamp{0%{transform:translate(-50%,-50%) rotate(-540deg) scale(.2);opacity:0}30%{transform:translate(-50%,-50%) rotate(0) scale(1.1);opacity:1}
+  85%{opacity:1}100%{transform:translate(-50%,-60%) scale(.9);opacity:0}}
+.flash{position:fixed;inset:0;z-index:59;pointer-events:none;background:radial-gradient(circle at 50% 40%,rgba(255,200,80,.55),transparent 65%);animation:flash .7s ease forwards}
+@keyframes flash{from{opacity:1}to{opacity:0}}
+.shake{animation:shake .45s}
+@keyframes shake{20%{transform:translateX(-8px) rotate(-1deg)}40%{transform:translateX(7px) rotate(1deg)}60%{transform:translateX(-5px)}80%{transform:translateX(3px)}}
+.toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);z-index:70;
+  background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:999px;font-weight:700;font-size:15px;opacity:0;transition:.25s;pointer-events:none;white-space:nowrap}
+.toast.on{opacity:1;transform:translateX(-50%)}
+.center{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:70vh;text-align:center;gap:10px;padding:20px}
+.center .cards{font-size:60px}
+.spinner{width:34px;height:34px;border-radius:50%;border:4px solid var(--line);border-top-color:var(--felt);animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"><div class="center"><div class="spinner"></div></div></div>
+
+<nav class="tabs" id="tabs" hidden><div class="in">
+  <button class="tab on" data-tab="play"><span class="ic">🃏</span>بازی</button>
+  <button class="tab" data-tab="tonight"><span class="ic">🌙</span>امشب</button>
+  <button class="tab" data-tab="stats"><span class="ic">🏆</span>آمار</button>
+  <button class="tab" data-tab="history"><span class="ic">📜</span>تاریخچه</button>
+</div></nav>
+
+<div class="scrim" id="scrim"></div>
+<div class="sheet" id="sheet"><div class="in"><div class="grab"></div><div id="sheetBody"></div></div></div>
+<canvas id="fx"></canvas>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+const tg = window.Telegram && Telegram.WebApp;
+const $ = s => document.querySelector(s);
+const FA = "۰۱۲۳۴۵۶۷۸۹";
+const fa = n => String(n).replace(/\d/g, d => FA[d]);
+const TEAM = {red: "قرمز", blue: "آبی"};
+const DOT = {red: "🔴", blue: "🔵"};
+const pts = n => `<bdi dir="ltr">+${fa(n)}</bdi>`;
+const other = t => t === "red" ? "blue" : "red";
+let V = null, prev = null, tab = "play", busy = false, pollT = null, lastHash = "";
+
+function haptic(kind){ try{
+  if(!tg || !tg.HapticFeedback) return;
+  if(kind === "ok" || kind === "error" || kind === "warning") tg.HapticFeedback.notificationOccurred(kind === "ok" ? "success" : kind);
+  else tg.HapticFeedback.impactOccurred(kind || "light");
+}catch(e){} }
+
+function toast(t){ const el = $("#toast"); el.textContent = t; el.classList.add("on");
+  clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove("on"), 1800); }
+
+function dur(sec){
+  sec = Math.max(0, Math.round(sec || 0));
+  if(sec < 60) return fa(sec) + " ثانیه";
+  const m = Math.floor(sec / 60); if(m < 60) return fa(m) + " دقیقه";
+  const h = Math.floor(m / 60), r = m % 60;
+  return r ? `${fa(h)} ساعت و ${fa(r)} دقیقه` : `${fa(h)} ساعت`;
+}
+function clock(sec){ sec = Math.max(0, Math.floor(sec || 0));
+  const h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60), s = sec % 60;
+  const p = n => String(n).padStart(2, "0");
+  return fa(h ? `${h}:${p(m)}:${p(s)}` : `${p(m)}:${p(s)}`); }
+const MONTHS = ["ژانویه","فوریه","مارس","آوریل","مه","ژوئن","ژوئیه","اوت","سپتامبر","اکتبر","نوامبر","دسامبر"];
+function dayName(d){ if(!d) return ""; const [y, m, dd] = d.split("-").map(Number); return `${fa(dd)} ${MONTHS[m-1]} ${fa(y)}`; }
+function hhmm(iso){ if(!iso) return ""; return fa(iso.slice(11, 16)); }
+
+/* ── api ── */
+const initData = tg ? tg.initData : "";
+async function api(path, body){
+  const r = await fetch(path, {method: "POST", headers: {"Content-Type": "application/json"},
+    body: JSON.stringify(Object.assign({initData, chat: V ? V.chat : undefined}, body || {}))});
+  if(!r.ok){ const t = await r.text(); const e = new Error(t); e.status = r.status; throw e; }
+  return r.json();
+}
+async function refresh(){
+  try{ const v = await api("/api/state"); apply(v); }
+  catch(e){ if(!V) fatal(e); }
+}
+async function act(action, extra){
+  if(busy) return; busy = true; document.body.classList.add("busy");
+  try{
+    const res = await api("/api/act", Object.assign({action}, extra || {}));
+    apply(res.view, true);
+  }catch(e){
+    haptic("error");
+    const m = {paused: "بازی متوقفه", "no game": "بازی فعالی نیست", "too late": "دیگه دیر شده", "nothing to undo": "چیزی برای برگشت نیست", stale: "یکی دیگه زودتر ثبت کرد"}[e.message];
+    toast(m || "نشد، دوباره بزن");
+    refresh();
+  }finally{ busy = false; document.body.classList.remove("busy"); }
+}
+
+function fatal(e){
+  const noTg = !initData;
+  $("#app").innerHTML = `<div class="center"><div class="cards">♠️</div>
+    <h2 style="margin:0">${noTg ? "این برنامه از داخل تلگرام باز میشه" : "دسترسی نداری"}</h2>
+    <div class="sub">${noTg ? "از دکمه‌ی «باز کردن برنامه حکم» توی گروه بازش کن." : "باید عضو گروه حکم باشی."}</div></div>`;
+}
+
+/* ── change detection → effects ── */
+function effects(a, b){
+  if(!a) return;
+  const ga = a.game, gb = b.game;
+  if(ga && gb && gb.hands.length > ga.hands.length){
+    const h = gb.hands[gb.hands.length - 1];
+    bump(h.w);
+    if(h.x){ stamp("کت چرخشی! 🌀", `${TEAM[h.w]} از ۷ رد شد، امتیازش شد ${fa(gb.score[h.w])}`, true); haptic("warning"); confetti(60, ["#f0a92e","#ff7a59","#fff"]); }
+    else if(h.k){ flash(); stamp("⚡ کت!", `${TEAM[h.w]} ${pts(h.p)}`); haptic("heavy"); shake(); }
+    else haptic("medium");
+  }
+  if(ga && !gb && b.history.length > a.history.length){
+    const g = b.history[b.history.length - 1];
+    if(g && g.winner){
+      const lose = g.score[other(g.winner)];
+      stamp(lose === 0 ? "۷ هیچ! 🔥" : "🏆 بُرد!", `${TEAM[g.winner]} ${fa(g.score[g.winner])} به ${fa(lose)}`, false, g.winner);
+      confetti(lose === 0 ? 260 : 170, g.winner === "red" ? ["#e2483d","#ff9a8f","#f0a92e","#fff"] : ["#2f6fe0","#8fb4ff","#f0a92e","#fff"]);
+      haptic("ok");
+    }
+  }
+  if(!ga && gb && !gb.hands.length){ haptic("light"); }
+}
+function bump(t){ const el = document.querySelector(`.team.${t}`); if(!el) return; el.classList.remove("bump"); void el.offsetWidth; el.classList.add("bump"); }
+function shake(){ const el = $(".table"); if(!el) return; el.classList.remove("shake"); void el.offsetWidth; el.classList.add("shake"); }
+function flash(){ const d = document.createElement("div"); d.className = "flash"; document.body.appendChild(d); setTimeout(() => d.remove(), 800); }
+function stamp(t, s, spin, team){ const d = document.createElement("div"); d.className = "stamp" + (spin ? " spin" : "") + (team ? " " + team : "");
+  d.innerHTML = `${t}${s ? `<small>${s}</small>` : ""}`; document.body.appendChild(d); setTimeout(() => d.remove(), 2000); }
+
+/* confetti */
+const cv = $("#fx"), cx = cv.getContext("2d"); let parts = [], raf = null;
+function sizeCv(){ cv.width = innerWidth * devicePixelRatio; cv.height = innerHeight * devicePixelRatio; }
+addEventListener("resize", sizeCv); sizeCv();
+function confetti(n, colors){
+  const suits = ["♠","♥","♣","♦"];
+  for(let i = 0; i < n; i++) parts.push({x: innerWidth * (.2 + Math.random() * .6), y: innerHeight * .35, vx: (Math.random() - .5) * 14,
+    vy: -Math.random() * 15 - 4, r: Math.random() * 6.28, vr: (Math.random() - .5) * .4, s: 6 + Math.random() * 8,
+    c: colors[i % colors.length], suit: Math.random() < .18 ? suits[i % 4] : null, life: 0});
+  if(!raf) tick();
+}
+function tick(){
+  cx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0); cx.clearRect(0, 0, innerWidth, innerHeight);
+  parts.forEach(p => { p.vy += .38; p.vx *= .99; p.x += p.vx; p.y += p.vy; p.r += p.vr; p.life++;
+    cx.save(); cx.translate(p.x, p.y); cx.rotate(p.r); cx.fillStyle = p.c;
+    if(p.suit){ cx.font = `${p.s * 2.2}px sans-serif`; cx.fillText(p.suit, 0, 0); } else cx.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2);
+    cx.restore(); });
+  parts = parts.filter(p => p.y < innerHeight + 40 && p.life < 400);
+  raf = parts.length ? requestAnimationFrame(tick) : (cx.clearRect(0, 0, innerWidth, innerHeight), null);
+}
+
+/* ── render ── */
+function apply(v, mine){
+  const h = JSON.stringify([v.game, v.history.length, v.can_undo_ended, v.today]);
+  const changed = h !== lastHash; lastHash = h;
+  prev = V; V = v;
+  $("#tabs").hidden = false;
+  if(changed || !prev) render();
+  else tickClock();
+  if(changed) effects(prev, v);
+}
+
+function render(){
+  const html = {play: renderPlay, tonight: renderTonight, stats: renderStats, history: renderHistory}[tab]();
+  $("#app").innerHTML = header() + `<div class="view on">${html}</div>`;
+  bind();
+}
+function header(){
+  const g = V.game;
+  const live = g ? (g.paused ? `<span class="dot off"></span>متوقف` : `<span class="dot"></span><span id="clk" dir="ltr">${clock(g.played_seconds)}</span>`) :
+    `<span class="dot off"></span>بازی‌ای در جریان نیست`;
+  return `<div class="top"><div class="brand">حکم <span class="suits">♠♥♣♦</span></div><span class="pill">${live}</span></div>`;
+}
+let clockBase = null;
+function tickClock(){ const el = $("#clk"); if(!el || !V.game) return; }
+setInterval(() => {
+  const el = document.getElementById("clk"); if(!el || !V || !V.game || V.game.paused) return;
+  if(!clockBase || clockBase.v !== V) clockBase = {v: V, t: Date.now()};
+  el.textContent = clock(V.game.played_seconds + (Date.now() - clockBase.t) / 1000);
+}, 1000);
+
+function pips(n){ let s = ""; for(let i = 0; i < V.target; i++) s += `<i class="pip ${i < n ? "on" : ""}"></i>`; return `<div class="pips">${s}</div>`; }
+function teamCard(t, g){
+  return `<div class="team ${t}">${g.hakem === t ? `<span class="crown">👑 حاکم</span>` : ""}
+    <div class="name">${DOT[t]} ${TEAM[t]}</div><div class="score">${fa(g.score[t])}</div>${pips(g.score[t])}</div>`;
+}
+function handChip(h, small){
+  const cls = `chip ${small ? "small " : ""}${h.x ? "wrap" : h.w}${h.k ? " kot" : ""}`;
+  return `<span class="${cls}">${h.x ? "🌀" : h.k ? "⚡" : ""}${pts(h.p)}</span>`;
+}
+
+function renderPlay(){
+  const g = V.game;
+  if(!g){
+    const lg = V.last_game;
+    let last = "";
+    if(lg && lg.winner){
+      last = `<div class="card"><h3>🏁 بازی قبلی</h3>
+        <div class="vs"><span class="r">${fa(lg.score.red)}</span><span class="sep">به</span><span class="b">${fa(lg.score.blue)}</span></div>
+        <div class="sub" style="text-align:center;margin-top:6px">${TEAM[lg.winner]} برد، ${dur(lg.seconds)}، ${fa(lg.hands_count || 0)} دست</div>
+        ${V.can_undo_ended ? `<button class="mbtn" style="width:100%;margin-top:12px" data-act="undo_ended">↩️ برگردون، اشتباه ثبت شد</button>` : ""}</div>`;
+    }
+    return `<div class="table"><div class="hero"><div class="fan">${["♠k","♥r","♣k","♦r"].map((c,i)=>`<div class="pc ${c[1]}" data-s="${c[0]}" style="transform:rotate(${(i-1.5)*14}deg);animation-delay:${i*.08}s">${c[0]}</div>`).join("")}</div><h2>میز آماده‌ست</h2><p>یه دست تازه شروع کنیم؟</p>
+      <button class="btn felt" style="background:var(--gold);color:var(--gold-ink);width:100%" data-act="newgame">🎴 بازی جدید</button></div></div>
+      ${tonightCard()}${last}`;
+  }
+  const n = g.hands.length;
+  const hands = n ? g.hands.map(h => handChip(h)).join("") : `<span class="empty-hands">هنوز دستی ثبت نشده. حاکم اول ${TEAM[g.hakem]}ه، اگه اشتباهه با «کت» دست اول درستش کن.</span>`;
+  return `<div class="table">
+    <div class="teams">${teamCard("red", g)}${teamCard("blue", g)}</div>
+    <div class="meta"><span>دست ${fa(n + 1)}</span><span>${n ? `آخرین: ${TEAM[g.hands[n-1].w]} ${g.hands[n-1].k ? "کت کرد" : "برد"}` : "شروع بازی"}</span></div>
+    <div class="hands">${hands}</div>
+    ${g.paused ? `<div class="paused"><div style="font-size:44px">⏸</div><div class="big">بازی متوقفه</div>
+      <button class="btn" style="background:var(--gold);color:var(--gold-ink);padding:14px 28px" data-act="resume">▶️ ادامه بازی</button></div>` : ""}
+  </div>
+  <div class="actions">
+    <button class="btn red" data-win="red" ${g.paused ? "disabled" : ""}>🔴 قرمز برد</button>
+    <button class="btn blue" data-win="blue" ${g.paused ? "disabled" : ""}>🔵 آبی برد</button>
+    <button class="btn kot" data-kot ${g.paused ? "disabled" : ""}>⚡ کت!</button>
+  </div>
+  <div class="mini">
+    <button class="mbtn" data-act="undo" ${n && !g.paused ? "" : "disabled"}>↩️ برگشت</button>
+    <button class="mbtn" data-act="${g.paused ? "resume" : "pause"}">${g.paused ? "▶️ ادامه" : "⏸ توقف"}</button>
+    <button class="mbtn" data-abort>🗑 لغو بازی</button>
+  </div>
+  ${tonightCard()}`;
+}
+
+function tonightCard(){
+  const t = V.today;
+  const w = t.today_wins, k = t.today_kots;
+  if(!w.red && !w.blue && !V.game) return "";
+  return `<div class="card"><h3>🌙 امشب</h3>
+    <div class="vs"><span class="r">${fa(w.red)}</span><span class="sep">به</span><span class="b">${fa(w.blue)}</span></div>
+    <div class="sub" style="text-align:center;margin-top:4px">کت‌ها: قرمز ${fa(k.red)}، آبی ${fa(k.blue)}</div></div>`;
+}
+
+function renderTonight(){
+  const t = V.today, games = V.tonight.slice().reverse();
+  const total = t.today_wins.red + t.today_wins.blue;
+  const lead = t.today_wins.red === t.today_wins.blue ? "مساوی" : (t.today_wins.red > t.today_wins.blue ? "قرمز جلوئه" : "آبی جلوئه");
+  let time = 0, hands = 0; V.tonight.forEach(g => { time += g.seconds || 0; hands += g.hands_count || 0; });
+  return `<div class="card" style="margin-top:0"><h3>🌙 امشب، ${dayName(t.today_date)}</h3>
+      <div class="vs"><span class="r">${fa(t.today_wins.red)}</span><span class="sep">به</span><span class="b">${fa(t.today_wins.blue)}</span></div>
+      <div class="sub" style="text-align:center">${total ? lead : "هنوز بازی‌ای تموم نشده"}</div>
+      ${total ? winBar(t.today_wins) : ""}
+      <div class="grid2" style="margin-top:12px">
+        <div class="tile"><div class="v">${fa(total)}</div><div class="l">بازی</div></div>
+        <div class="tile"><div class="v">${fa(hands)}</div><div class="l">دست</div></div>
+        <div class="tile"><div class="v">${fa(t.today_kots.red + t.today_kots.blue)}</div><div class="l">کت</div></div>
+        <div class="tile"><div class="v" style="font-size:18px">${time ? dur(time) : "۰"}</div><div class="l">زمان بازی</div></div>
+      </div></div>
+    ${games.length ? `<div class="day">${games.map(gameRow).join("")}</div>` : ""}`;
+}
+
+function winBar(w){
+  const tot = (w.red + w.blue) || 1, r = Math.round(100 * w.red / tot);
+  return `<div class="bar"><div class="r" style="width:${r}%"></div><div class="b" style="width:${100 - r}%"></div></div>
+    <div class="barlbl"><span style="color:var(--red)">قرمز ${fa(r)}٪</span><span style="color:var(--blue)">آبی ${fa(100 - r)}٪</span></div>`;
+}
+
+function renderStats(){
+  const t = V.today, L = V.lifetime, F = V.fun, s = t.split_kots, w = t.wraps;
+  const tw = t.total_wins;
+  const lead = tw.red === tw.blue ? "دقیقا مساوی" : `${tw.red > tw.blue ? "قرمز" : "آبی"} ${fa(Math.abs(tw.red - tw.blue))} بازی جلوئه`;
+  const cs = F.current_streak;
+  const rec = (icon, k, o) => o ? `<div class="row"><span class="k">${icon} ${k}</span><span class="v">${o}</span></div>` : "";
+  const who = o => `<span class="tag ${o.winner || o.team}">${TEAM[o.winner || o.team]}</span>`;
+  return `<div class="card" style="margin-top:0"><h3>🏆 کل بازی‌ها</h3>
+      <div class="vs"><span class="r">${fa(tw.red)}</span><span class="sep">به</span><span class="b">${fa(tw.blue)}</span></div>
+      <div class="sub" style="text-align:center">${lead}</div>${winBar(tw)}
+      ${cs.team ? `<div style="text-align:center;margin-top:10px"><span class="tag ${cs.team}">🔥 ${TEAM[cs.team]} ${fa(cs.len)} بازی پشت سر هم برده</span></div>` : ""}
+    </div>
+    <div class="card"><h3>📈 فرم بیست بازی آخر</h3><div class="form">${F.form.map(x => `<i class="${x}"></i>`).join("")}</div>
+      <div class="sub" style="margin-top:8px">از راست به چپ، قدیمی به جدید</div></div>
+    <div class="card"><h3>⚡ کت‌ها</h3>
+      <div class="row"><span class="k">کت عادی (+۲)</span><span class="v"><span class="tag red">${fa(s.normal.red)}</span> <span class="tag blue">${fa(s.normal.blue)}</span></span></div>
+      <div class="row"><span class="k">حاکم‌کت (+۳)</span><span class="v"><span class="tag red">${fa(s.hakem.red)}</span> <span class="tag blue">${fa(s.hakem.blue)}</span></span></div>
+      <div class="row"><span class="k">🌀 کت چرخشی</span><span class="v"><span class="tag red">${fa(w.red)}</span> <span class="tag blue">${fa(w.blue)}</span></span></div>
+      <div class="row"><span class="k">۷ هیچ</span><span class="v"><span class="tag red">${fa(F.shutouts.red)}</span> <span class="tag blue">${fa(F.shutouts.blue)}</span></span></div>
+    </div>
+    <div class="card"><h3>🎖 رکوردها</h3>
+      ${rec("🔥", "طولانی‌ترین برد پشت سر هم", `<span class="tag red">${fa(F.best_streak.red)}</span> <span class="tag blue">${fa(F.best_streak.blue)}</span>`)}
+      ${F.best_night ? rec("🌙", "بهترین شب", `${who(F.best_night)} ${fa(F.best_night.wins)} به ${fa(F.best_night.other)}`) : ""}
+      ${F.comeback ? rec("🦅", "بزرگ‌ترین برگشت", `${who(F.comeback)} از ${fa(F.comeback.deficit)} امتیاز عقب`) : ""}
+      ${F.fastest ? rec("⚡", "سریع‌ترین بازی", `${who(F.fastest)} ${dur(F.fastest.seconds)}`) : ""}
+      ${F.longest ? rec("🐢", "طولانی‌ترین بازی", `${who(F.longest)} ${dur(F.longest.seconds)}`) : ""}
+      ${F.most_hands ? rec("🃏", "بیشترین دست", `${who(F.most_hands)} ${fa(F.most_hands.hands)} دست`) : ""}
+    </div>
+    <div class="card"><h3>⏱ از اول تا حالا</h3><div class="grid2">
+      <div class="tile"><div class="v">${fa(L.games)}</div><div class="l">بازی</div></div>
+      <div class="tile"><div class="v">${fa(L.hands)}</div><div class="l">دست</div></div>
+      <div class="tile"><div class="v" style="font-size:18px">${fa(Math.round(L.total_seconds / 3600))} ساعت</div><div class="l">کل زمان بازی</div></div>
+      <div class="tile"><div class="v" style="font-size:18px">${dur(L.avg_game_seconds)}</div><div class="l">میانگین هر بازی</div></div>
+    </div></div>`;
+}
+
+function gameRow(g, i){
+  if(g.imported) return `<div class="game"><div class="line"><span class="res">قرمز ${fa(g.wins.red)}، آبی ${fa(g.wins.blue)}</span><span class="badge">ثبت دستی</span></div></div>`;
+  const kots = (g.kots ? g.kots.red + g.kots.blue : 0), wraps = g.wraps ? g.wraps.red + g.wraps.blue : 0;
+  const lose = g.score[other(g.winner)];
+  return `<div class="game" data-open>
+    <div class="line"><span class="tag ${g.winner}">${DOT[g.winner]} ${TEAM[g.winner]} برد</span>
+      <span class="res"><span style="color:var(--red)">${fa(g.score.red)}</span> <span class="sub">به</span> <span style="color:var(--blue)">${fa(g.score.blue)}</span></span></div>
+    <div class="line sub" style="margin-top:6px"><span>${hhmm(g.started_at)}${g.seconds ? "، " + dur(g.seconds) : ""}</span>
+      <span>${lose === 0 ? `<span class="badge gold">۷ هیچ</span> ` : ""}${wraps ? `<span class="badge gold">🌀 ${fa(wraps)}</span> ` : ""}${kots ? `<span class="badge">⚡ ${fa(kots)}</span>` : ""}</span></div>
+    ${g.hands ? `<div class="extra">${g.hands.map(h => handChip(h, true)).join("")}</div>` : ""}</div>`;
+}
+
+let histLimit = 12;
+function renderHistory(){
+  const byDay = {};
+  V.history.forEach(g => { (byDay[g.day] = byDay[g.day] || []).push(g); });
+  const days = Object.keys(byDay).sort().reverse();
+  const shown = days.slice(0, histLimit);
+  return shown.map(d => {
+    const gs = byDay[d].slice().reverse();
+    let r = 0, b = 0; gs.forEach(g => { if(g.imported){ r += g.wins.red; b += g.wins.blue; } else if(g.winner === "red") r++; else b++; });
+    return `<div class="day"><div class="dayhead"><span>${dayName(d)}</span>
+      <span><span class="tag red">${fa(r)}</span> <span class="tag blue">${fa(b)}</span></span></div>${gs.map(gameRow).join("")}</div>`;
+  }).join("") + (days.length > histLimit ? `<button class="mbtn" style="width:100%;margin-top:16px" data-more>شب‌های قبل‌تر</button>` : "")
+    + `<div class="sub" style="text-align:center;margin-top:14px">روی هر بازی بزن تا دست‌هاش رو ببینی</div>`;
+}
+
+/* ── kot sheet ── */
+function openSheet(html){ $("#sheetBody").innerHTML = html; $("#sheet").classList.add("on"); $("#scrim").classList.add("on");
+  if(tg && tg.BackButton){ tg.BackButton.show(); } bindSheet(); }
+function closeSheet(){ $("#sheet").classList.remove("on"); $("#scrim").classList.remove("on"); if(tg && tg.BackButton) tg.BackButton.hide(); }
+$("#scrim").onclick = closeSheet;
+if(tg && tg.BackButton) tg.BackButton.onClick(closeSheet);
+
+function kotSheet(){
+  const g = V.game; haptic("light");
+  if(!g.hands.length){
+    let hakem = g.hakem;
+    const draw = () => openSheet(`<h3>⚡ کت دست اول</h3><div class="sub">حاکم اول کی بود؟</div>
+      <div class="seg"><button class="${hakem === "red" ? "on red" : ""}" data-h="red">👑 قرمز</button><button class="${hakem === "blue" ? "on blue" : ""}" data-h="blue">👑 آبی</button></div>
+      <div class="sub">کی کت کرد؟</div>
+      <div class="actions" style="margin-top:0">
+        <button class="btn red" data-k1="red">🔴 قرمز ${pts(hakem === "red" ? 2 : 3)}</button>
+        <button class="btn blue" data-k1="blue">🔵 آبی ${pts(hakem === "blue" ? 2 : 3)}</button></div>`);
+    draw();
+    kotSheet.setH = h => { hakem = h; haptic("light"); draw(); };
+    kotSheet.hakem = () => hakem;
+    return;
+  }
+  openSheet(`<h3>⚡ کی کت کرد؟</h3><div class="sub">حاکم الان ${TEAM[g.hakem]}ه 👑</div>
+    <div class="actions" style="margin-top:0">
+      <button class="btn red" data-kw="red">🔴 قرمز ${pts(g.hakem === "red" ? 2 : 3)}</button>
+      <button class="btn blue" data-kw="blue">🔵 آبی ${pts(g.hakem === "blue" ? 2 : 3)}</button></div>`);
+}
+function bindSheet(){
+  document.querySelectorAll("[data-h]").forEach(b => b.onclick = () => kotSheet.setH(b.dataset.h));
+  document.querySelectorAll("[data-kw]").forEach(b => b.onclick = () => { closeSheet(); act("kot", {team: b.dataset.kw}); });
+  document.querySelectorAll("[data-k1]").forEach(b => b.onclick = () => { closeSheet(); act("kot1", {team: b.dataset.k1, hakem: kotSheet.hakem()}); });
+}
+
+function confirmBox(text, cb){
+  if(tg && tg.showConfirm && tg.isVersionAtLeast && tg.isVersionAtLeast("6.2")) tg.showConfirm(text, ok => ok && cb());
+  else if(confirm(text)) cb();
+}
+
+function bind(){
+  document.querySelectorAll("[data-win]").forEach(b => b.onclick = () => act("win", {team: b.dataset.win}));
+  document.querySelectorAll("[data-kot]").forEach(b => b.onclick = kotSheet);
+  document.querySelectorAll("[data-act]").forEach(b => b.onclick = () => {
+    const a = b.dataset.act;
+    if(a === "newgame" && V.game) return confirmBox("یه بازی در جریانه. پاکش کنیم و از اول شروع کنیم؟", () => act("newgame", {confirm: true}));
+    haptic("light"); act(a);
+  });
+  document.querySelectorAll("[data-abort]").forEach(b => b.onclick = () =>
+    confirmBox("این بازی بدون ثبت پاک بشه؟", () => act("abort")));
+  document.querySelectorAll("[data-open]").forEach(el => el.onclick = () => { el.classList.toggle("open"); haptic("light"); });
+  document.querySelectorAll("[data-more]").forEach(b => b.onclick = () => { histLimit += 15; render(); });
+}
+
+document.querySelectorAll(".tab").forEach(b => b.onclick = () => {
+  if(tab === b.dataset.tab) return;
+  tab = b.dataset.tab; haptic("light");
+  document.querySelectorAll(".tab").forEach(x => x.classList.toggle("on", x === b));
+  render(); scrollTo(0, 0);
+});
+
+/* ── boot ── */
+function theme(){
+  if(!tg) return;
+  document.documentElement.dataset.theme = tg.colorScheme === "dark" ? "dark" : "light";
+  const bg = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim();
+  try{ tg.setHeaderColor(bg); tg.setBackgroundColor(bg); if(tg.setBottomBarColor) tg.setBottomBarColor(bg); }catch(e){}
+}
+if(tg){
+  tg.ready(); tg.expand(); theme(); tg.onEvent("themeChanged", theme);
+  try{ if(tg.disableVerticalSwipes) tg.disableVerticalSwipes(); }catch(e){}
+}
+function poll(){ clearTimeout(pollT); pollT = setTimeout(async () => { if(!document.hidden && !busy) await refresh(); poll(); }, 2500); }
+document.addEventListener("visibilitychange", () => { if(!document.hidden) refresh(); });
+if(!initData) fatal(); else { refresh().then(poll); }
+</script>
+</body>
+</html>

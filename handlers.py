@@ -92,7 +92,7 @@ async def _refresh_loop(application, chat_id: int):
                         await application.bot.edit_message_text(
                             chat_id=chat_id, message_id=msg_id,
                             text=msg.score_board_text(g),
-                            reply_markup=kb.board_kb(g),
+                            reply_markup=kb.board_kb(g, chat_id),
                             parse_mode=ParseMode.HTML,
                         )
                     except BadRequest as e:
@@ -142,7 +142,7 @@ async def _send_scoreboard_fresh(context, chat_id: int, state: dict):
     m = await context.bot.send_message(
         chat_id=chat_id,
         text=msg.score_board_text(g),
-        reply_markup=kb.board_kb(g),
+        reply_markup=kb.board_kb(g, chat_id),
         parse_mode=ParseMode.HTML,
     )
     g["score_board_message_id"] = m.message_id
@@ -160,7 +160,7 @@ async def _edit_scoreboard(context, chat_id: int, state: dict, *,
     if extra_text:
         text = text + "\n\n" + extra_text
     if reply_markup is None:
-        reply_markup = kb.board_kb(g)
+        reply_markup = kb.board_kb(g, chat_id)
     if not msg_id:
         await _send_scoreboard_fresh(context, chat_id, state)
         return
@@ -195,6 +195,16 @@ async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text=msg.help_text(),
         parse_mode=ParseMode.HTML,
     )
+
+
+async def cmd_app(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
+    await _delete_user_message(update)
+    markup = kb.app_kb(chat_id)
+    if not markup:
+        await _ephemeral(context, chat_id, "برنامه هنوز روشن نشده.")
+        return
+    await context.bot.send_message(chat_id=chat_id, text="🎴 برنامه حکم", reply_markup=markup)
 
 
 async def cmd_newgame(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -669,7 +679,7 @@ async def _finish_game(context, chat_id: int, state: dict):
     end_msg = await context.bot.send_message(
         chat_id=chat_id,
         text=msg.end_game_text(record, today, state),
-        reply_markup=kb.end_kb(),
+        reply_markup=kb.end_kb(chat_id),
         parse_mode=ParseMode.HTML,
     )
     if state.get("last_ended_game"):

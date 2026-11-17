@@ -59,3 +59,10 @@
 
 ## Deploy
 روی سرور با systemd. فایل `deploy/hokm-bot.service` و `deploy/deploy.sh`.
+
+## Mini App (17 Nov 2026, built, NOT deployed yet)
+- `webapi.py`: aiohttp server inside the PTB process (same loop, same `storage.lock_for` locks). Validates Telegram initData (HMAC), checks chat membership (cached 600 s), reuses the handlers' helpers via a `_Ctx` shim so the group scoreboard, end messages and events stay in sync. Routes: `GET /`, `POST /api/state`, `POST /api/act`, `/static/`. Events carry `"via":"webapp"`.
+- `webapp/index.html`: single vanilla JS page, RTL, Vazirmatn, warm felt-table look, tabs بازی / امشب / آمار / تاریخچه, kot sheet, confetti, stamps, haptics; polls every 2.5 s.
+- Env: `WEB_HOST`, `WEB_PORT` (8050), `WEBAPP_URL`, `WEBAPP_LINK` (empty = app off). `/app` command and an app row on the scoreboard and end keyboards (old buttons stay, his choice).
+- Hosting (LIVE setup 17 Nov): nginx + certbot on `hokm.91.107.179.127.nip.io` -> `127.0.0.1:8050`; compose needs `ports: ["127.0.0.1:8050:8050"]`. He must enable the Main Mini App in BotFather. Group link: `https://t.me/Hokmnightsbot?startapp=g<digits>`.
+- Local test: no browser on the laptop; use docker `mcr.microsoft.com/playwright:v1.48.2-noble` with `--network host`.
