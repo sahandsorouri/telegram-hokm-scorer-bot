@@ -379,7 +379,7 @@ function tick(){
 /* ── render ── */
 function apply(v, mine){
   // The clock ticks on every poll; leave it out so the page only redraws on real changes.
-  const h = JSON.stringify([v.game, v.history.length, v.can_undo_ended, v.today], (k, x) => k === "played_seconds" ? undefined : x);
+  const h = JSON.stringify([v.game, v.history.length, v.can_undo_ended, v.today], (k, x) => (k === "played_seconds" || k === "hand_seconds") ? undefined : x);
   const changed = h !== lastHash; lastHash = h;
   prev = V; V = v;
   $("#tabs").hidden = false;
@@ -404,7 +404,9 @@ function tickClock(){ const el = $("#clk"); if(!el || !V.game) return; }
 setInterval(() => {
   const el = document.getElementById("clk"); if(!el || !V || !V.game || V.game.paused) return;
   if(!clockBase || clockBase.v !== V) clockBase = {v: V, t: Date.now()};
-  el.textContent = clock(V.game.played_seconds + (Date.now() - clockBase.t) / 1000);
+  const d = (Date.now() - clockBase.t) / 1000;
+  el.textContent = clock(V.game.played_seconds + d);
+  const hc = document.getElementById("hclk"); if(hc) hc.textContent = clock((V.game.hand_seconds || 0) + d);
 }, 1000);
 
 function pips(n){ let s = ""; for(let i = 0; i < V.target; i++) s += `<i class="pip ${i < n ? "on" : ""}"></i>`; return `<div class="pips">${s}</div>`; }
@@ -436,7 +438,7 @@ function renderPlay(){
   const hands = n ? g.hands.map(h => handChip(h)).join("") : `<span class="empty-hands">هنوز دستی ثبت نشده. حاکم اول ${TEAM[g.hakem]}ه، اگه اشتباهه با «کت» دست اول درستش کن.</span>`;
   return `<div class="table">
     <div class="teams">${teamCard("red", g)}${teamCard("blue", g)}</div>
-    <div class="meta"><span>دست ${fa(n + 1)}</span><span>${n ? `آخرین: ${TEAM[g.hands[n-1].w]} ${g.hands[n-1].k ? "کت کرد" : "برد"}` : "شروع بازی"}</span></div>
+    <div class="meta"><span>دست ${fa(n + 1)}${g.paused ? "" : `، <span id="hclk" dir="ltr">${clock(g.hand_seconds)}</span>`}</span><span>${n ? `آخرین: ${TEAM[g.hands[n-1].w]} ${g.hands[n-1].k ? "کت کرد" : "برد"}` : "شروع بازی"}</span></div>
     <div class="hands">${hands}</div>
     ${g.paused ? `<div class="paused"><div style="font-size:44px">⏸</div><div class="big">بازی متوقفه</div>
       <button class="btn" style="background:var(--gold);color:var(--gold-ink);padding:14px 28px" data-act="resume">▶️ ادامه بازی</button></div>` : ""}

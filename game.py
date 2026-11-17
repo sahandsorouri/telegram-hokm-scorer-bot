@@ -114,6 +114,7 @@ def add_hand(g: dict, winner: str, kot: bool) -> int:
         "kot": kot,
         "wrapped": wrapped,
         "hakem_at_hand": hakem_before,
+        "at": now_tz().isoformat(),
     })
     g["hakem"] = winner
     g["last_event_at"] = now_tz().isoformat()

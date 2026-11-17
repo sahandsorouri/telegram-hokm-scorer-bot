@@ -145,6 +145,28 @@ def _secs_since(iso: str | None) -> float | None:
         return None
 
 
+def _hand_seconds(g: dict) -> float:
+    """Time since the current hand began (last hand's end, or the game start), pauses left out."""
+    hands = g.get("hands") or []
+    start_iso = (hands[-1].get("at") or g.get("last_event_at")) if hands else g.get("started_at")
+    try:
+        start = datetime.fromisoformat(start_iso)
+    except (TypeError, ValueError):
+        return 0.0
+    now = game.now_tz()
+    secs = (now - start).total_seconds()
+    spans = list(g.get("pauses") or [])
+    if g.get("paused_at"):
+        spans.append({"from": g["paused_at"], "to": now.isoformat()})
+    for p in spans:
+        try:
+            a, b = datetime.fromisoformat(p["from"]), datetime.fromisoformat(p["to"])
+        except (KeyError, TypeError, ValueError):
+            continue
+        secs -= max(0.0, (min(b, now) - max(a, start)).total_seconds())
+    return max(0.0, secs)
+
+
 def _live_game_view(g: dict) -> dict:
     played = _secs_since(g.get("started_at")) or 0.0
     played -= game.paused_seconds(g.get("pauses"))
@@ -162,6 +184,7 @@ def _live_game_view(g: dict) -> dict:
         "paused": bool(g.get("paused_at")),
         "started_at": g.get("started_at"),
         "played_seconds": max(0.0, played),
+        "hand_seconds": _hand_seconds(g),
         "game_day": g.get("game_day"),
     }
 
